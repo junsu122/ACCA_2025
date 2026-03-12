@@ -1,0 +1,40 @@
+# 수정 반영된 예시 (중요 부분만 발췌)
+ublox_gps_node:
+  ros__parameters:
+    debug: 0
+
+    save:
+      mask: 3103          # 그대로
+      device: 1           # ⚠️ FLASH
+
+    device: /dev/ttyACM0
+    frame_id: gps
+    rate: 10.0            # ⚠️ 10 Hz
+    nav_rate: 1
+
+    dynamic_model: automotive   # ⚠️ 차량용
+    fix_mode: auto
+    enable_ppp: false
+    dr_limit: 0
+
+    tmode3: 0            # 로버
+
+    uart1:
+      baudrate: 115200
+      in: 0              # 보정 신호 USB로만 받을 때
+      out: 0
+
+    gnss:
+      gps:      true
+      sbas:     false    # ⚠️ RTK 시 꺼도 무관
+      galileo:  true
+      beidou:   true
+      imes:     false
+      qzss:     true
+      glonass:  true
+      irnss:    false
+
+    dgnss_mode: 3
+
+    inf:
+      all: false

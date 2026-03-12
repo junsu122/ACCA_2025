@@ -89,7 +89,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/
 lib64/
 parts/
 sdist/
@@ -275,5 +275,4 @@ COLCON_IGNORE
 AMENT_IGNORE
 
 *.zip
-
 # End of https://www.toptal.com/developers/gitignore/api/python,c,c++,ros2
