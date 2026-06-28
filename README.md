@@ -14,6 +14,35 @@ LiDAR, GPS, IMU, 카메라를 융합하여 다양한 미션(콘 주행, 주차, 
 
 ---
 
+## 📑 목차
+
+- [System Architecture](#architecture)
+- [패키지 목록](#packages)
+- [Environment & Equipment](#environment)
+- [Dependencies](#dependencies)
+- [Build](#build)
+- [Execution Guide](#execution)
+- [패키지 의존 관계 요약](#dependency-graph)
+- [주요 파라미터](#parameters)
+- **[🙋 내 주요 업무](#my-work)**
+  - [1. 카메라 위치 설정 및 카메라 화면 연결](#work-1)
+  - [2. 라이다 센서 post-processing](#work-2)
+  - [3. 카메라 라이다 센서 퓨전](#work-3)
+  - [4. YOLO 모델 선정](#work-4)
+  - [5. 꼬깔, 배달위치, 신호등, 차선 데이터 YOLO 학습](#work-5)
+  - [6. 예선2 Path 생성 알고리즘 구현](#work-6)
+  - [7. 예선2 테스트 주행](#work-7)
+  - [8. 본선 신호등 시간 체크 및 구간별 필요시간 파악](#work-8)
+- **[🔧 Trouble Shooting](#trouble-shooting)**
+  - [1. 3D LiDAR의 정보 불충분](#trouble-1)
+  - [2. 자동차 부재로 인한 실험 난항](#trouble-2)
+  - [3. Path 정확도 문제](#trouble-3)
+  - [4. fusion 정확도 문제](#trouble-4)
+  - [5. yolo 모델에 따른 인식문제](#trouble-5)
+
+---
+
+<a id="architecture"></a>
 ## 🏗️ System Architecture
 
 본 프로젝트는 **센서 → 인식 → local → 경로계획 → 제어** 의 자율주행 전체 파이프라인을 ROS2(Humble)로 구현합니다.
@@ -48,6 +77,7 @@ LiDAR, GPS, IMU, 카메라를 융합하여 다양한 미션(콘 주행, 주차, 
 
 ---
 
+<a id="packages"></a>
 ## 📦 패키지 목록
 
 ### 🔌 센서 드라이버 (`src/sensor/`)
@@ -230,6 +260,7 @@ GPS 신호 없는 실내/음영 구역에서 **RRT\* 알고리즘**으로 경로
 
 ---
 
+<a id="environment"></a>
 ## 🖥️ Environment & Equipment
 
 ### Software
@@ -247,6 +278,7 @@ GPS 신호 없는 실내/음영 구역에서 **RRT\* 알고리즘**으로 경로
 
 ---
 
+<a id="dependencies"></a>
 ## 📦 Dependencies
 
 ```bash
@@ -266,6 +298,7 @@ pip install pyproj scipy shapely cvxpy
 
 ---
 
+<a id="build"></a>
 ## 🔨 Build
 
 ```bash
@@ -284,6 +317,7 @@ source install/setup.bash
 
 ---
 
+<a id="execution"></a>
 ## 🚀 Execution Guide
 
 ### 1. 센서 구동
@@ -349,6 +383,7 @@ ros2 run erp42_control controller_traffic_light
 ```
 ---
 
+<a id="dependency-graph"></a>
 ## 📁 패키지 의존 관계 요약
 
 ```
@@ -368,6 +403,7 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 
 ---
 
+<a id="parameters"></a>
 ## ⚠️ 주요 파라미터
 
 ### Stanley 컨트롤러 공통 파라미터
@@ -388,8 +424,10 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 
 ---
 
+<a id="my-work"></a>
 ## 🙋 내 주요 업무
 
+<a id="work-1"></a>
 ### 1. [카메라 위치 설정 및 카메라 화면 연결]
 > 좌/중/우 3대의 카메라로 차량 전방 시야를 확보하고, 각 카메라 영상을 하나의 인식 파이프라인에서 사용할 수 있도록 연결
 > 1. 차량 전방 사각지대를 최소화할 수 있는 좌/중/우 카메라 거치 위치 및 각도 선정
@@ -401,6 +439,7 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 
 ---
 
+<a id="work-2"></a>
 ### 2. [라이다 센서 post-processing]
 > 3D LiDAR 원본 포인트클라우드에서 콘/장애물만 남기기 위해 아래 순서로 전처리 파이프라인을 구성
 > 1. **CropBox 필터** (`crop`/`fusion`) — 차량 기준 관심 영역(전방 x, 좌우 y 범위) 밖의 포인트 제거
@@ -408,13 +447,24 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 > 3. **Adaptive Clustering** (`adaptive_clustering`) — 남은 포인트를 Euclidean 거리 기준으로 군집화하여 콘/장애물 단위 객체로 분리
 > 4. 각 클러스터의 중심 좌표를 `PoseArray`로 발행하여 다음 단계(카메라-라이다 퓨전)에 전달
 
-![LiDAR-rawdata](assets/object_lidar.png)
-![cropbox](assets/object_cropbox.png)
-![ground-segmentation](assets/object_ground.png)
-![post-processing_done](assets/object_post-processing.png)
+<table>
+  <tr>
+    <td align="center"><b>① 원본 LiDAR</b></td>
+    <td align="center"><b>② CropBox 필터</b></td>
+    <td align="center"><b>③ 지면 제거</b></td>
+    <td align="center"><b>④ 클러스터링 완료</b></td>
+  </tr>
+  <tr>
+    <td><img src="assets/object_lidar.png" width="220"/></td>
+    <td><img src="assets/object_cropbox.png" width="220"/></td>
+    <td><img src="assets/object_ground.png" width="220"/></td>
+    <td><img src="assets/object_post-processing.png" width="220"/></td>
+  </tr>
+</table>
 
 ---
 
+<a id="work-3"></a>
 ### 3. [카메라 라이다 센서 퓨전]
 > LiDAR로 얻은 콘의 3D 위치와 카메라로 얻은 콘의 색상(YOLO 바운딩박스)을 결합하여 "어디에 어떤 색의 콘이 있는지" 판단
 > 1. LiDAR 클러스터 중심점(`/cone_poses`)을 카메라 좌표계로 변환 (Extrinsic, `R_RTlc`, `C_RTlc`, `L_RTlc`)
@@ -422,24 +472,42 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 > 3. 투영된 픽셀 좌표가 YOLO 바운딩박스 내부에 포함되는지 검사하여 콘의 색상(노랑/파랑) 결정
 > 4. 색상이 매칭된 콘 위치를 `point/yellow`, `point/blue`로 각각 발행
 
-![2D to 3D](assets/2d23d.png)
-![3D to 2D](assets/3d22d.png)
+<table>
+  <tr>
+    <td align="center"><b>LiDAR 3D 포인트 → 카메라 좌표계(2D 투영 전)</b></td>
+    <td align="center"><b>3D → 2D Projection 결과</b></td>
+  </tr>
+  <tr>
+    <td><img src="assets/2d23d.png" width="380"/></td>
+    <td><img src="assets/3d22d.png" width="380"/></td>
+  </tr>
+</table>
 
 ---
 
+<a id="work-4"></a>
 ### 4. [YOLO 모델 선정]
 > 실시간성과 인식 정확도를 모두 만족하는 YOLO 모델 버전을 비교 실험을 통해 선정
 > 1. 최신 YOLO 모델들의 추론 속도(FPS) / 정확도(mAP) 비교
 > 2. 콘이 다닥다닥 붙어 있는 상황에서 바운딩박스 기반 모델의 한계(겹침으로 인한 오인식) 확인
 > 3. 박스가 아닌 객체의 외곽선만 추출하는 **Segmentation 모델**로 전환하여 밀집 콘 구간 인식률 개선 (자세한 원인/해결은 [Trouble Shooting #5](#5-yolo-모델에-따른-인식문제) 참고)
 
-![yolo모델비교](assets/yolo모델비교.png)
-![인식률](assets/인식률.png)
+<table>
+  <tr>
+    <td align="center"><b>YOLO 모델별(v8~v12) 학습 결과 비교</b></td>
+    <td align="center"><b>모델별 인식률(Precision) 비교</b></td>
+  </tr>
+  <tr>
+    <td><img src="assets/yolo모델비교.png" width="380"/></td>
+    <td><img src="assets/인식률.png" width="380"/></td>
+  </tr>
+</table>
 
-"최대 1000 에포크 학습 실험 결과, YOLOv8은 최신 버전들(v9~v12) 대비 가장 짧은 시간(2244초) 내에 최적의 수렴을 이루었으며, 특히 이미지 상의 객체 위치 정확도를 대변하는 box_loss가 0.39095로 가장 낮고 정밀도(Precision)가 0.99554로 가장 높아, 3D 공간 투영 및 센서 퓨전의 정확도를 극대화하기에 가장 적합한 밸런스 모델로 판단하여 선정함."
+> 최대 1000 에포크 학습 실험 결과, YOLOv8은 최신 버전들(v9~v12) 대비 가장 짧은 시간(2244초) 내에 최적의 수렴을 이루었으며, 특히 이미지 상의 객체 위치 정확도를 대변하는 box_loss가 0.39095로 가장 낮고 정밀도(Precision)가 0.99554로 가장 높아, 3D 공간 투영 및 센서 퓨전의 정확도를 극대화하기에 가장 적합한 밸런스 모델로 판단하여 선정함.
 
 ---
 
+<a id="work-5"></a>
 ### 5. [꼬깔, 배달위치, 신호등, 차선 데이터 YOLO 학습]
 > 대회 미션 수행에 필요한 4종 객체(콘, 배달 표지판, 신호등, 차선)에 대한 학습 데이터셋 구축 및 모델 학습
 > 1. 실제 주행 환경(학교, KCity)에서 각 객체가 포함된 영상을 다양한 거리/조도 조건으로 수집
@@ -447,11 +515,20 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 > 3. 학습된 가중치를 YOLO 추론 노드에 적용하여 실주행 환경에서 검증
 > 4. 오인식 케이스를 추가 수집하여 데이터셋을 보강하는 반복 학습 진행
 
-![delivery_표지판](assets/delivery.png)
-![traffic_light](assets/traffic_light.png)
+<table>
+  <tr>
+    <td align="center"><b>배달 표지판 인식</b></td>
+    <td align="center"><b>신호등 인식</b></td>
+  </tr>
+  <tr>
+    <td><img src="assets/delivery.png" width="380"/></td>
+    <td><img src="assets/traffic_light.png" width="380"/></td>
+  </tr>
+</table>
 
 ---
 
+<a id="work-6"></a>
 ### 6. [예선2 Path 생성 알고리즘 구현]
 > 노란/파란 콘으로 구성된 랜덤 트랙에서, 콘 인식 결과만으로 실시간 주행 경로를 생성하는 알고리즘 구현 (`path_plan_cone`)
 > 1. 단순히 좌/우 콘의 중점을 잇는 방식은 한쪽 콘 누락·콘 수 불일치 시 경로가 불안정해지는 문제 확인
@@ -459,10 +536,14 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 > 3. 서로 다른 색의 콘을 잇는 삼각형 변(edge)들의 중점을 추출하여 주행 가능 경로 포인트로 사용
 > 4. Cubic Spline으로 포인트를 보간하여 부드러운 곡선 경로로 변환 후 발행 (`del_path`)
 
-![들로네삼각분할](assets/들로네삼각분할.png)
+<p align="center">
+  <b>들로네 삼각분할(Delaunay Triangulation) 기반 콘 트랙 경로 생성</b><br/>
+  <img src="assets/들로네삼각분할.png" width="500"/>
+</p>
 
 ---
 
+<a id="work-7"></a>
 ### 7. [예선2 테스트 주행]
 > 들로네 기반 경로 생성 알고리즘을 실차(ERP42)에 적용하여 콘 트랙 테스트 주행 진행
 
@@ -470,6 +551,7 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 
 ---
 
+<a id="work-8"></a>
 ### 8. [본선 신호등 시간 체크 및 구간별 필요시간 파악]
 > 본선 코스의 각 신호등 구간(`traffic_light_sections`)에서 신호 주기와 구간별 통과 소요시간을 사전에 파악하여 정지/출발 로직 튜닝
 > 1. 코스 내 7개 신호등 구간의 적색/녹색 신호 ID를 사전 매핑 (`controller_traffic_light.py`)
@@ -477,12 +559,17 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 > 3. 신호 전환 오인식 방지를 위한 `time_threshold`(신호 유지 판정 시간) 값 설정
 > 4. 측정한 구간별 소요시간을 기준으로, 신호 대기 중 정차 위치와 재출발 타이밍 조정
 
-![신호등 시간비교](assets/신호등%20시간비교.png)
+<p align="center">
+  <b>구간별 신호등 통과 소요시간 비교</b><br/>
+  <img src="assets/신호등 시간비교.png" width="500"/>
+</p>
 
 ---
 
+<a id="trouble-shooting"></a>
 ## 🔧 Trouble Shooting
 
+<a id="trouble-1"></a>
 ### 1. 3D LiDAR의 정보 불충분
 **증상** > 3D LiDAR만으로는 꼬깔의 색깔을 인식하기 어려워, 코너 주행시 경로를 잘 찾지 못함.
 
@@ -492,6 +579,7 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 
 ---
 
+<a id="trouble-2"></a>
 ### 2. 자동차 부제로 인한 실험 난황
 **증상** > erp-42를 쓸 수 없어, 실험 확인 및 주행에 큰 차질이 생김.
 
@@ -499,11 +587,20 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 
 **해결** > 원래의 일정에 맞추기 위해서는 실험을 계속 해야했기 때문에, 자동차 위에 사용하던 플랫폼을 그대로 구르마에 장착하여 control 부분을 뺀 나머지 부분을 실험
 
-![원래 차량](assets/차량%20urdf.png)
-![고장난후](assets/차량%20고장났을때.jpg)
+<table>
+  <tr>
+    <td align="center"><b>정상 차량 (URDF)</b></td>
+    <td align="center"><b>고장 발생 후</b></td>
+  </tr>
+  <tr>
+    <td><img src="assets/차량 urdf.png" width="380"/></td>
+    <td><img src="assets/차량 고장났을때.jpg" width="380"/></td>
+  </tr>
+</table>
 
 ---
 
+<a id="trouble-3"></a>
 ### 3. Path 정확도 문제
 **증상** > 꼬깔의 색을 잘 인식하더라도, 양쪽 꼬깔의 수가 다르거나 만약 인식하지 못한 꼬깔이 생긴다면, path가 안정적으로 나오지 않음
 
@@ -513,6 +610,7 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 
 ---
 
+<a id="trouble-4"></a>
 ### 4. fusion 정확도 문제
 **증상** > 처음에 calibration을 잘 해놓더라도, 시간이 지날수록 하나의 경향을 띄며 fusion에 오차가 생김.
 
@@ -522,6 +620,7 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 
 ---
 
+<a id="trouble-5"></a>
 ### 5. yolo 모델에 따른 인식문제
 **증상** > 일반 boundingbox를 사용할때 콘이 다닥다닥 붙어있다면 인식률이 확 떨어짐
 
@@ -529,7 +628,15 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 
 **해결** > boundingbox가 아니라, segmentation모델을 사용해서 masking을 하여 그 안으로 투영된 값들만 사용하도록 함.
 
-![yolo_detect 모델](assets/yolo_detect.png)
-![yolo_segmentation 모델](assets/yolo_seg.png)
+<table>
+  <tr>
+    <td align="center"><b>Bounding Box(Detect) 모델</b></td>
+    <td align="center"><b>Segmentation 모델</b></td>
+  </tr>
+  <tr>
+    <td><img src="assets/yolo_detect.png" width="380"/></td>
+    <td><img src="assets/yolo_seg.png" width="380"/></td>
+  </tr>
+</table>
 
 ---
