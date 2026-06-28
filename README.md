@@ -408,7 +408,10 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 > 3. **Adaptive Clustering** (`adaptive_clustering`) — 남은 포인트를 Euclidean 거리 기준으로 군집화하여 콘/장애물 단위 객체로 분리
 > 4. 각 클러스터의 중심 좌표를 `PoseArray`로 발행하여 다음 단계(카메라-라이다 퓨전)에 전달
 
-<!-- 전처리 단계별(원본 → cropbox → 지면제거 → 클러스터링) 비교 사진 -->
+![LiDAR-rawdata](assets/object_lidar.png)
+![cropbox](assets/object_cropbox.png)
+![ground-segmentation](assets/object_ground.png)
+![post-processing_done](assets/object_post-processing.png)
 
 ---
 
@@ -419,7 +422,8 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 > 3. 투영된 픽셀 좌표가 YOLO 바운딩박스 내부에 포함되는지 검사하여 콘의 색상(노랑/파랑) 결정
 > 4. 색상이 매칭된 콘 위치를 `point/yellow`, `point/blue`로 각각 발행
 
-<!-- 카메라 화면에 LiDAR 포인트를 투영한 퓨전 결과 사진 -->
+![2D to 3D](assets/2d23d.png)
+![3D to 2D](assets/3d22d.png)
 
 ---
 
@@ -430,6 +434,9 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 > 3. 박스가 아닌 객체의 외곽선만 추출하는 **Segmentation 모델**로 전환하여 밀집 콘 구간 인식률 개선 (자세한 원인/해결은 [Trouble Shooting #5](#5-yolo-모델에-따른-인식문제) 참고)
 
 ![yolo모델비교](assets/yolo모델비교.png)
+![인식률](assets/인식률.png)
+
+"최대 1000 에포크 학습 실험 결과, YOLOv8은 최신 버전들(v9~v12) 대비 가장 짧은 시간(2244초) 내에 최적의 수렴을 이루었으며, 특히 이미지 상의 객체 위치 정확도를 대변하는 box_loss가 0.39095로 가장 낮고 정밀도(Precision)가 0.99554로 가장 높아, 3D 공간 투영 및 센서 퓨전의 정확도를 극대화하기에 가장 적합한 밸런스 모델로 판단하여 선정함."
 
 ---
 
@@ -440,7 +447,8 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 > 3. 학습된 가중치를 YOLO 추론 노드에 적용하여 실주행 환경에서 검증
 > 4. 오인식 케이스를 추가 수집하여 데이터셋을 보강하는 반복 학습 진행
 
-<!-- 각 클래스별 인식 결과 사진 -->
+![delivery_표지판](assets/delivery.png)
+![traffic_light](assets/traffic_light.png)
 
 ---
 
@@ -491,6 +499,9 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 
 **해결** > 원래의 일정에 맞추기 위해서는 실험을 계속 해야했기 때문에, 자동차 위에 사용하던 플랫폼을 그대로 구르마에 장착하여 control 부분을 뺀 나머지 부분을 실험
 
+![원래 차량](assets/차량%20urdf.png)
+![고장난후](assets/차량%20고장났을때.jpg)
+
 ---
 
 ### 3. Path 정확도 문제
@@ -517,5 +528,8 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 **원인** > LiDAR에서 나오는 좌표를 카메라에 투영시키는데, 이때 boundingbox안에 들어가는지를 확인함. 만약 찍히는 점이 boundingbox가 겹치는 부분이라면 정확히 인식하지 못함.
 
 **해결** > boundingbox가 아니라, segmentation모델을 사용해서 masking을 하여 그 안으로 투영된 값들만 사용하도록 함.
+
+![yolo_detect 모델](assets/yolo_detect.png)
+![yolo_segmentation 모델](assets/yolo_seg.png)
 
 ---
