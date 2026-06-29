@@ -474,8 +474,8 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 
 <table>
   <tr>
-    <td align="center"><b>LiDAR 3D 포인트 → 카메라 좌표계(2D 투영 전)</b></td>
-    <td align="center"><b>3D → 2D Projection 결과</b></td>
+    <td align="center"><b>이미지픽셀 → 라이다 좌표계</b></td>
+    <td align="center"><b>라이다 좌표 → 카메라 이미지</b></td>
   </tr>
   <tr>
     <td><img src="assets/2d23d.png" width="380"/></td>
@@ -590,7 +590,7 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 <table>
   <tr>
     <td align="center"><b>정상 차량 (URDF)</b></td>
-    <td align="center"><b>고장 발생 후</b></td>
+    <td align="center"><b>차량 사고 후</b></td>
   </tr>
   <tr>
     <td><img src="assets/차량 urdf.png" width="380"/></td>
@@ -617,6 +617,17 @@ create_db / path_making ──→ [.db 파일] ──→ erp42_control
 **원인** > 차가 주행을 하면서 생기는 떨림, 사람 조작 실수로 인한 camera or LiDAR 회전 등올 인한 튜닝값 오차.
 
 **해결** > 계속해서, calibration을 진행할수는 없기에, fusion test용 파일로 경향을 파악. 오차가 생기는 픽셀값을 파악하여, 계산된 값에 더하거나 빼서 경향을 맞춰줌.
+
+<table>
+  <tr>
+    <td align="center"><b>튜닝 전</b></td>
+    <td align="center"><b>튜닝 후</b></td>
+  </tr>
+  <tr>
+    <td><img src="assets/튜닝전.png" width="380"/></td>
+    <td><img src="assets/튜닝후.png" width="380"/></td>
+  </tr>
+</table>
 
 ---
 
